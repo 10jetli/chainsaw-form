@@ -1,0 +1,943 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ลซ.๑ — กรอกอัตโนมัติ</title>
+<style>
+  :root {
+    --bg: #f5f4f0;
+    --card: #ffffff;
+    --border: #ddd9d0;
+    --accent: #1a472a;
+    --accent2: #2d6a4f;
+    --text: #1c1c1c;
+    --muted: #6b6b6b;
+    --danger: #c0392b;
+    --success: #1a472a;
+    --input-bg: #fafaf8;
+    --radius: 10px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Sarabun', 'TH Sarabun New', 'Noto Sans Thai', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  header { background: var(--accent); color: #fff; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+  header svg { width: 28px; height: 28px; flex-shrink: 0; }
+  header h1 { font-size: 18px; font-weight: 600; letter-spacing: 0.02em; }
+  header span { font-size: 12px; opacity: 0.7; display: block; margin-top: 2px; }
+
+  .container { max-width: 900px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Steps */
+  .steps { display: flex; gap: 0; margin-bottom: 24px; border-radius: var(--radius); overflow: hidden; border: 1px solid var(--border); }
+  .step { flex: 1; padding: 10px 8px; text-align: center; font-size: 12px; background: var(--card); color: var(--muted); border-right: 1px solid var(--border); cursor: pointer; transition: all 0.2s; }
+  .step:last-child { border-right: none; }
+  .step.active { background: var(--accent); color: #fff; font-weight: 600; }
+  .step.done { background: #e8f5e9; color: var(--success); }
+  .step-num { display: block; font-size: 18px; font-weight: 700; margin-bottom: 2px; }
+
+  /* Card */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--accent); margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+
+  /* Camera */
+  .cam-box { position: relative; background: #111; border-radius: 8px; overflow: hidden; aspect-ratio: 4/3; display: flex; align-items: center; justify-content: center; }
+  #video { width: 100%; height: 100%; object-fit: cover; display: none; }
+  #snapshot { width: 100%; height: 100%; object-fit: contain; display: none; }
+  .cam-placeholder { text-align: center; color: #666; padding: 32px; }
+  .cam-placeholder svg { width: 56px; height: 56px; margin-bottom: 12px; opacity: 0.3; }
+  .cam-placeholder p { font-size: 14px; }
+  .guide-overlay { position: absolute; inset: 0; display: none; pointer-events: none; align-items: center; justify-content: center; }
+  .guide-overlay.show { display: flex; }
+  .guide-rect { width: 82%; aspect-ratio: 85.6/53.98; border: 2.5px solid rgba(255,255,255,0.85); border-radius: 6px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+  .guide-text { position: absolute; bottom: 14px; font-size: 12px; color: #fff; background: rgba(0,0,0,0.55); padding: 4px 12px; border-radius: 20px; }
+
+  /* Buttons */
+  .btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  button { padding: 10px 18px; border-radius: 8px; border: 1px solid var(--border); font-size: 14px; cursor: pointer; font-family: inherit; transition: all 0.15s; font-weight: 500; }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-primary { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .btn-primary:not(:disabled):hover { background: var(--accent2); }
+  .btn-outline { background: var(--card); color: var(--text); }
+  .btn-outline:not(:disabled):hover { background: var(--bg); }
+  .btn-danger { background: var(--danger); color: #fff; border-color: var(--danger); }
+
+  .status-msg { margin-top: 10px; font-size: 13px; padding: 8px 12px; border-radius: 6px; display: none; }
+  .status-msg.info { background: #e8f5e9; color: var(--success); display: block; }
+  .status-msg.loading { background: #fff8e1; color: #f57f17; display: block; }
+  .status-msg.error { background: #ffebee; color: var(--danger); display: block; }
+
+  /* Form */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-full { grid-column: 1 / -1; }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; font-weight: 500; }
+  input[type=text], input[type=tel], select, textarea {
+    width: 100%; padding: 9px 11px; border: 1px solid var(--border); border-radius: 7px;
+    font-size: 14px; font-family: inherit; background: var(--input-bg); color: var(--text);
+    transition: border 0.15s;
+  }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  .section-divider { grid-column: 1/-1; border-top: 1px solid var(--border); padding-top: 12px; margin-top: 4px; font-size: 13px; font-weight: 600; color: var(--accent); }
+
+  /* Checkboxes */
+  .chk-group { display: flex; flex-direction: column; gap: 8px; }
+  .chk-item { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+  .chk-item input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  /* ID preview */
+  .id-result { background: #f0f7f0; border: 1px solid #c8e6c9; border-radius: 8px; padding: 14px; margin-top: 12px; display: none; }
+  .id-result.show { display: block; }
+  .id-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; }
+  .id-field { font-size: 13px; }
+  .id-field strong { display: block; font-size: 11px; color: var(--muted); font-weight: 500; }
+
+  /* Upload zone */
+  .upload-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 20px; text-align: center; cursor: pointer; color: var(--muted); font-size: 13px; transition: all 0.15s; }
+  .upload-zone:hover { border-color: var(--accent); color: var(--accent); background: #f0f7f0; }
+
+  /* Submit */
+  .submit-row { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
+  .btn-lg { padding: 13px 28px; font-size: 16px; border-radius: 10px; }
+
+  @media (max-width: 600px) {
+    .form-grid, .form-grid.cols3 { grid-template-columns: 1fr; }
+    .id-fields { grid-template-columns: 1fr; }
+    .steps { flex-wrap: nowrap; }
+    .step { font-size: 10px; padding: 8px 4px; }
+  }
+
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #fff3; border-top-color: #fff; border-radius: 50%; animation: spin 0.6s linear infinite; vertical-align: middle; margin-right: 6px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect x="2" y="6" width="24" height="16" rx="2" stroke="white" stroke-width="1.5"/>
+    <path d="M8 14h12M8 18h6" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+    <rect x="5" y="9" width="5" height="3" rx="1" fill="white"/>
+  </svg>
+  <div>
+    <h1>ลซ.๑ — คำขอรับใบอนุญาตให้มีเลื่อยโซ่ยนต์</h1>
+    <span>สแกนบัตรประชาชน → กรอกอัตโนมัติ → ดาวน์โหลด PDF</span>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="steps">
+    <div class="step active" id="step1-tab" onclick="goStep(1)"><span class="step-num">1</span>สแกนบัตร</div>
+    <div class="step" id="step2-tab" onclick="goStep(2)"><span class="step-num">2</span>ตรวจสอบข้อมูล</div>
+    <div class="step" id="step3-tab" onclick="goStep(3)"><span class="step-num">3</span>ข้อมูลเลื่อย</div>
+    <div class="step" id="step4-tab" onclick="goStep(4)"><span class="step-num">4</span>ดาวน์โหลด PDF</div>
+  </div>
+
+  <!-- Step 1: Scan -->
+  <div id="page1">
+    <div class="card">
+      <div class="card-title">
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="1" y="3" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5"/><circle cx="5.5" cy="7.5" r="1.5" fill="currentColor"/><path d="M1 12l4-3 3 2.5 3-3 4 3.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        ถ่ายหรืออัปโหลดรูปบัตรประชาชน
+      </div>
+
+      <div class="cam-box" id="camBox">
+        <video id="video" autoplay playsinline muted></video>
+        <img id="snapshot" alt="บัตร"/>
+        <div class="cam-placeholder" id="camPlaceholder">
+          <svg viewBox="0 0 56 56" fill="none"><rect x="4" y="10" width="48" height="36" rx="4" stroke="currentColor" stroke-width="2"/><circle cx="28" cy="28" r="9" stroke="currentColor" stroke-width="2"/><rect x="21" y="4" width="14" height="8" rx="2" stroke="currentColor" stroke-width="2"/></svg>
+          <p>เปิดกล้องหรืออัปโหลดรูปบัตร</p>
+        </div>
+        <div class="guide-overlay" id="guideOverlay">
+          <div class="guide-rect"></div>
+          <span class="guide-text">วางบัตรในกรอบ แล้วกดถ่ายภาพ</span>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn-primary" id="btnCam" onclick="toggleCamera()">เปิดกล้อง</button>
+        <button class="btn-outline" id="btnCapture" disabled onclick="capturePhoto()">ถ่ายภาพ</button>
+        <label style="margin:0">
+          <button class="btn-outline" onclick="this.closest('label').querySelector('input').click()">อัปโหลดรูป</button>
+          <input type="file" accept="image/*" style="display:none" onchange="handleFile(event)">
+        </label>
+      </div>
+
+      <div class="status-msg" id="camStatus">พร้อมใช้งาน</div>
+
+      <div class="btn-row" style="margin-top:16px; justify-content:flex-end">
+        <button class="btn-primary" id="btnRead" disabled onclick="readCard()">อ่านบัตร (AI)</button>
+        <button class="btn-outline" id="btnNext1" disabled onclick="goStep(2)">ถัดไป →</button>
+      </div>
+    </div>
+
+    <div class="card" style="padding:14px 20px">
+      <div class="upload-zone" onclick="document.getElementById('fileInput2').click()">
+        หรือถ้าไม่มีกล้อง — คลิกที่นี่เพื่ออัปโหลดรูปบัตรจากอุปกรณ์
+        <input type="file" id="fileInput2" accept="image/*" style="display:none" onchange="handleFile(event)">
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Personal info -->
+  <div id="page2" style="display:none">
+    <div class="card">
+      <div class="card-title">ข้อมูลผู้ขออนุญาต (กรอก/แก้ไขได้)</div>
+
+      <!-- ประเภทผู้ขอ -->
+      <div style="margin-bottom:16px">
+        <label>ประเภทผู้ขอ</label>
+        <div class="chk-group" style="flex-direction:row; gap:20px">
+          <label class="chk-item"><input type="radio" name="personType" value="personal" checked onchange="togglePersonType()"> บุคคลธรรมดา</label>
+          <label class="chk-item"><input type="radio" name="personType" value="juristic" onchange="togglePersonType()"> นิติบุคคล</label>
+        </div>
+      </div>
+
+      <div class="form-grid" id="personalSection">
+        <div class="form-full"><div class="section-divider">บุคคลธรรมดา</div></div>
+        <div>
+          <label>คำนำหน้า</label>
+          <select id="f_prefix"><option>นาย</option><option>นาง</option><option selected>นางสาว</option></select>
+        </div>
+        <div>
+          <label>ชื่อ</label>
+          <input type="text" id="f_firstname" placeholder="ชื่อจริง">
+        </div>
+        <div>
+          <label>นามสกุล</label>
+          <input type="text" id="f_lastname" placeholder="นามสกุล">
+        </div>
+        <div>
+          <label>เลขบัตรประชาชน</label>
+          <input type="text" id="f_idcard" placeholder="0 0000 00000 00 0" maxlength="17">
+        </div>
+        <div>
+          <label>สัญชาติ</label>
+          <input type="text" id="f_nationality" value="ไทย">
+        </div>
+        <div>
+          <label>เชื้อชาติ</label>
+          <input type="text" id="f_race" value="ไทย">
+        </div>
+        <div>
+          <label>วันเกิด</label>
+          <input type="text" id="f_dob" placeholder="1 มกราคม 2500">
+        </div>
+        <div>
+          <label>อายุ</label>
+          <input type="text" id="f_age" placeholder="อายุ (ปี)">
+        </div>
+      </div>
+
+      <div class="form-grid" id="juristicSection" style="display:none">
+        <div class="form-full"><div class="section-divider">นิติบุคคล</div></div>
+        <div>
+          <label>ประเภทนิติบุคคล</label>
+          <input type="text" id="f_jtype" placeholder="เช่น ห้างหุ้นส่วนจำกัด">
+        </div>
+        <div>
+          <label>ชื่อนิติบุคคล</label>
+          <input type="text" id="f_jname" placeholder="ชื่อบริษัท/หจก.">
+        </div>
+        <div>
+          <label>จดทะเบียนเมื่อ</label>
+          <input type="text" id="f_jdate" placeholder="วัน/เดือน/ปี">
+        </div>
+        <div>
+          <label>เลขทะเบียน</label>
+          <input type="text" id="f_jregno">
+        </div>
+        <div class="form-full"><div class="section-divider">ผู้มีอำนาจลงชื่อแทนนิติบุคคล</div></div>
+        <div>
+          <label>ชื่อ-นามสกุล</label>
+          <input type="text" id="f_jrep">
+        </div>
+        <div>
+          <label>เลขบัตรประชาชน</label>
+          <input type="text" id="f_jrepid" maxlength="17">
+        </div>
+      </div>
+
+      <div class="form-grid" style="margin-top:16px">
+        <div class="form-full"><div class="section-divider">ที่อยู่</div></div>
+        <div>
+          <label>บ้านเลขที่</label>
+          <input type="text" id="f_baan">
+        </div>
+        <div>
+          <label>หมู่ที่</label>
+          <input type="text" id="f_moo">
+        </div>
+        <div>
+          <label>ตรอก/ซอย</label>
+          <input type="text" id="f_soi">
+        </div>
+        <div>
+          <label>ถนน</label>
+          <input type="text" id="f_road">
+        </div>
+        <div>
+          <label>ตำบล/แขวง</label>
+          <input type="text" id="f_tambon">
+        </div>
+        <div>
+          <label>อำเภอ/เขต</label>
+          <input type="text" id="f_amphoe">
+        </div>
+        <div>
+          <label>จังหวัด</label>
+          <input type="text" id="f_changwat">
+        </div>
+        <div>
+          <label>รหัสไปรษณีย์</label>
+          <input type="text" id="f_zip" maxlength="5">
+        </div>
+        <div>
+          <label>โทรศัพท์</label>
+          <input type="tel" id="f_phone">
+        </div>
+        <div>
+          <label>โทรสาร</label>
+          <input type="tel" id="f_fax">
+        </div>
+        <div class="form-full">
+          <label>Email</label>
+          <input type="text" id="f_email">
+        </div>
+        <div class="form-full">
+          <label>ประกอบอาชีพ/กิจการ</label>
+          <input type="text" id="f_occupation">
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-outline" onclick="goStep(1)">← ย้อนกลับ</button>
+        <button class="btn-primary" onclick="goStep(3)">ถัดไป →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Saw details -->
+  <div id="page3" style="display:none">
+    <div class="card">
+      <div class="card-title">ข้อมูลเลื่อยโซ่ยนต์และวัตถุประสงค์</div>
+
+      <div class="form-grid">
+        <div class="form-full"><div class="section-divider">ข้อ ๒ — จำนวนและรายละเอียดเลื่อย</div></div>
+        <div>
+          <label>จำนวนรวม (เครื่อง)</label>
+          <input type="text" id="f_total" value="1">
+        </div>
+        <div>
+          <label>ยี่ห้อ/รุ่น ข้อ ๒.๑</label>
+          <input type="text" id="f_brand1" placeholder="เช่น NEWWAVE / F070">
+        </div>
+        <div>
+          <label>ประเภทเครื่องจักร ข้อ ๒.๑</label>
+          <input type="text" id="f_type1" placeholder="เช่น เครื่องยนต์น้ำมัน">
+        </div>
+        <div>
+          <label>กำลัง (แรงม้า) ข้อ ๒.๑</label>
+          <input type="text" id="f_power1" placeholder="เช่น 6.5">
+        </div>
+        <div>
+          <label>ความยาวแผ่นบังคับโซ่ (นิ้ว) ข้อ ๒.๑</label>
+          <input type="text" id="f_blade1" placeholder="เช่น 36">
+        </div>
+        <div>
+          <label>จำนวน ข้อ ๒.๑ (เครื่อง)</label>
+          <input type="text" id="f_qty1" value="1">
+        </div>
+
+        <div class="form-full"><div class="section-divider">ข้อ ๓ — พื้นที่</div></div>
+        <div>
+          <label>อำเภอ/เขต ที่ขออนุญาต</label>
+          <input type="text" id="f_area_amphoe">
+        </div>
+        <div>
+          <label>จังหวัด ที่ขออนุญาต</label>
+          <input type="text" id="f_area_changwat">
+        </div>
+
+        <div class="form-full"><div class="section-divider">ข้อ ๔ — วัตถุประสงค์</div></div>
+        <div class="form-full">
+          <div class="chk-group">
+            <label class="chk-item"><input type="checkbox" id="f_obj1"> ๔.๑ รับจ้างทั่วไป</label>
+            <label class="chk-item"><input type="checkbox" id="f_obj2"> ๔.๒ ใช้ในกิจการส่วนตัว</label>
+            <label class="chk-item"><input type="checkbox" id="f_obj3"> ๔.๓ อื่นๆ</label>
+          </div>
+        </div>
+        <div class="form-full">
+          <label>รายละเอียด (อื่นๆ)</label>
+          <input type="text" id="f_obj_other">
+        </div>
+
+        <div class="form-full"><div class="section-divider">วันที่และสถานที่เขียน</div></div>
+        <div>
+          <label>เขียนที่</label>
+          <input type="text" id="f_writeat" placeholder="จังหวัด...">
+        </div>
+        <div>
+          <label>วันที่</label>
+          <input type="text" id="f_writeday" placeholder="1">
+        </div>
+        <div>
+          <label>เดือน</label>
+          <input type="text" id="f_writemonth" placeholder="มกราคม">
+        </div>
+        <div>
+          <label>พ.ศ.</label>
+          <input type="text" id="f_writeyear" placeholder="2568">
+        </div>
+      </div>
+
+      <div class="submit-row">
+        <button class="btn-outline" onclick="goStep(2)">← ย้อนกลับ</button>
+        <button class="btn-primary btn-lg" id="btnGenPDF" onclick="generatePDF()">สร้าง PDF ↓</button>
+      </div>
+      <div class="status-msg" id="pdfStatus"></div>
+    </div>
+  </div>
+
+  <!-- Step 4: Download -->
+  <div id="page4" style="display:none">
+    <div class="card" style="text-align:center; padding:40px 20px">
+      <div style="font-size:56px; margin-bottom:16px">✅</div>
+      <h2 style="font-size:22px; color:var(--accent); margin-bottom:8px">สร้าง PDF สำเร็จ!</h2>
+      <p style="color:var(--muted); margin-bottom:24px">พิมพ์ไฟล์นี้ลงบนกระดาษฟอร์มเปล่าได้เลย</p>
+      <div class="btn-row" style="justify-content:center">
+        <a id="downloadLink" href="#" download="ลซ1_คำขอ.pdf">
+          <button class="btn-primary btn-lg">⬇ ดาวน์โหลด PDF</button>
+        </a>
+        <button class="btn-outline btn-lg" onclick="goStep(1); resetForm()">เพิ่มลูกค้าใหม่</button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ── State ──────────────────────────────────────────
+let stream = null;
+let capturedImage = null;     // base64 string (no prefix)
+let capturedImageMime = 'image/jpeg'; // mime type of capturedImage
+
+// ── Navigation ────────────────────────────────────
+function goStep(n) {
+  for (let i = 1; i <= 4; i++) {
+    document.getElementById('page' + i).style.display = i === n ? 'block' : 'none';
+    const tab = document.getElementById('step' + i + '-tab');
+    tab.className = 'step' + (i === n ? ' active' : i < n ? ' done' : '');
+  }
+}
+
+// ── Camera ────────────────────────────────────────
+async function toggleCamera() {
+  if (stream) { stopCamera(); return; }
+  try {
+    setStatus('camStatus', 'กำลังเปิดกล้อง...', 'loading');
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: {ideal: 'environment'}, width: {ideal: 1920} }
+    });
+    document.getElementById('video').srcObject = stream;
+    document.getElementById('video').style.display = 'block';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    document.getElementById('snapshot').style.display = 'none';
+    document.getElementById('guideOverlay').classList.add('show');
+    document.getElementById('btnCam').textContent = 'ปิดกล้อง';
+    document.getElementById('btnCam').className = 'btn-danger';
+    document.getElementById('btnCapture').disabled = false;
+    setStatus('camStatus', 'กล้องพร้อม — วางบัตรในกรอบ', 'info');
+  } catch (e) {
+    setStatus('camStatus', 'ไม่สามารถเปิดกล้องได้: ' + e.message, 'error');
+  }
+}
+
+function stopCamera() {
+  if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
+  document.getElementById('video').style.display = 'none';
+  document.getElementById('guideOverlay').classList.remove('show');
+  document.getElementById('btnCam').textContent = 'เปิดกล้อง';
+  document.getElementById('btnCam').className = 'btn-primary';
+  document.getElementById('btnCapture').disabled = true;
+}
+
+function capturePhoto() {
+  const video = document.getElementById('video');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+  capturedImageMime = 'image/jpeg';
+  capturedImage = dataUrl.split(',')[1];
+  const snap = document.getElementById('snapshot');
+  snap.src = dataUrl;
+  snap.style.display = 'block';
+  stopCamera();
+  document.getElementById('btnRead').disabled = false;
+  setStatus('camStatus', 'ถ่ายภาพแล้ว — กด "อ่านบัตร (AI)" เพื่อวิเคราะห์', 'info');
+}
+
+function handleFile(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const dataUrl = ev.target.result;
+    capturedImageMime = file.type || 'image/jpeg';
+    capturedImage = dataUrl.split(',')[1];
+    const snap = document.getElementById('snapshot');
+    snap.src = ev.target.result;
+    snap.style.display = 'block';
+    document.getElementById('camPlaceholder').style.display = 'none';
+    document.getElementById('btnRead').disabled = false;
+    setStatus('camStatus', 'โหลดรูปแล้ว — กด "อ่านบัตร (AI)"', 'info');
+    if (stream) stopCamera();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ── Compress image before sending ───────────────────
+function compressImage(base64, mime, maxW=1200) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxW / Math.max(img.width, img.height));
+      const w = Math.round(img.width * scale);
+      const h = Math.round(img.height * scale);
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h;
+      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      resolve(c.toDataURL('image/jpeg', 0.82).split(',')[1]);
+    };
+    img.src = 'data:' + mime + ';base64,' + base64;
+  });
+}
+
+// ── AI Read Card ──────────────────────────────────
+async function readCard() {
+  if (!capturedImage) return;
+  const btn = document.getElementById('btnRead');
+  btn.innerHTML = '<span class="spinner"></span>กำลังอ่าน...';
+  btn.disabled = true;
+  setStatus('camStatus', 'AI กำลังวิเคราะห์บัตร...', 'loading');
+
+  try {
+    // detect actual image type from base64 header
+    const mime = capturedImageMime || 'image/jpeg';
+
+    const apiKey = localStorage.getItem('anthropic_api_key') || '';
+    const headers = {
+      'Content-Type': 'application/json',
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    };
+    if (apiKey) headers['x-api-key'] = apiKey;
+
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1000,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: mime, data: capturedImage } },
+            { type: 'text', text: `นี่คือรูปบัตรประชาชนไทย กรุณาอ่านข้อมูลทั้งหมดที่มองเห็น แล้วตอบกลับเป็น JSON object เท่านั้น ห้ามมีข้อความอื่นนอกจาก JSON:
+{"prefix":"นาย หรือ นาง หรือ นางสาว","firstname":"ชื่อภาษาไทย","lastname":"นามสกุลภาษาไทย","firstname_en":"ชื่อภาษาอังกฤษ","lastname_en":"นามสกุลภาษาอังกฤษ","idcard":"เลขบัตร 13 หลัก ตัวเลขล้วนไม่มีขีด","dob":"วันเกิดภาษาไทย เช่น 10 เมษายน 2503","baan":"บ้านเลขที่","moo":"หมู่ที่","tambon":"ตำบลหรือแขวง","amphoe":"อำเภอหรือเขต","changwat":"จังหวัด"}
+ถ้าอ่านค่าใดไม่ได้ให้ใส่ค่าว่าง ""` }
+          ]
+        }]
+      })
+    });
+
+    if (!res.ok) {
+      const errBody = await res.text();
+      throw new Error(`API error ${res.status}: ${errBody.slice(0,200)}`);
+    }
+
+    const data = await res.json();
+
+    // handle API-level errors
+    if (data.error) throw new Error(data.error.message || JSON.stringify(data.error));
+
+    const rawText = (data.content || []).map(b => b.text || '').join('').trim();
+
+    // robust JSON extraction — find first { ... } block
+    const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) throw new Error('ไม่พบข้อมูล JSON ในคำตอบ: ' + rawText.slice(0, 100));
+    const parsed = JSON.parse(jsonMatch[0]);
+
+    // fill form
+    document.getElementById('f_prefix').value = parsed.prefix || 'นาย';
+    document.getElementById('f_firstname').value = parsed.firstname || '';
+    document.getElementById('f_lastname').value = parsed.lastname || '';
+    document.getElementById('f_idcard').value = parsed.idcard || '';
+    document.getElementById('f_dob').value = parsed.dob || '';
+    document.getElementById('f_baan').value = parsed.baan || '';
+    document.getElementById('f_moo').value = parsed.moo || '';
+    document.getElementById('f_tambon').value = parsed.tambon || '';
+    document.getElementById('f_amphoe').value = parsed.amphoe || '';
+    document.getElementById('f_changwat').value = parsed.changwat || '';
+    // auto-fill area
+    document.getElementById('f_area_amphoe').value = parsed.amphoe || '';
+    document.getElementById('f_area_changwat').value = parsed.changwat || '';
+    document.getElementById('f_writeat').value = parsed.changwat || '';
+
+    // show summary
+    const fields = document.getElementById('idFields');
+    fields.innerHTML = [
+      ['ชื่อ-นามสกุล', `${parsed.prefix||''} ${parsed.firstname||''} ${parsed.lastname||''}`],
+      ['เลขบัตร', parsed.idcard || '-'],
+      ['วันเกิด', parsed.dob || '-'],
+      ['อำเภอ', parsed.amphoe || '-'],
+      ['จังหวัด', parsed.changwat || '-'],
+      ['บ้านเลขที่', parsed.baan || '-'],
+    ].map(([k,v]) => `<div class="id-field"><strong>${k}</strong>${v}</div>`).join('');
+    document.getElementById('idResult').classList.add('show');
+    document.getElementById('btnNext1').disabled = false;
+    setStatus('camStatus', 'อ่านบัตรสำเร็จ ✓ กด "ถัดไป" เพื่อตรวจสอบข้อมูล', 'info');
+  } catch (err) {
+    console.error('readCard error:', err);
+    let msg = err.message || String(err);
+    if (msg.includes('401') || msg.includes('authentication') || msg.includes('api_key')) {
+      msg = 'API Key ไม่ถูกต้อง — กรุณาใส่ API Key ในช่องด้านล่าง';
+
+    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+      msg = 'ไม่สามารถเชื่อมต่อ API — ตรวจสอบอินเทอร์เน็ต หรือ API Key';
+
+    }
+    setStatus('camStatus', 'เกิดข้อผิดพลาด: ' + msg, 'error');
+  }
+
+  btn.innerHTML = 'อ่านบัตร (AI)';
+  btn.disabled = false;
+}
+
+// ── Person type toggle ────────────────────────────
+function togglePersonType() {
+  const v = document.querySelector('input[name=personType]:checked').value;
+  document.getElementById('personalSection').style.display = v === 'personal' ? 'grid' : 'none';
+  document.getElementById('juristicSection').style.display = v === 'juristic' ? 'grid' : 'none';
+}
+
+// ── Generate PDF (server-side via Anthropic API + Python script route) ──
+// Since we can't run Python in browser, we build the PDF client-side using jsPDF
+
+async function generatePDF() {
+  const btn = document.getElementById('btnGenPDF');
+  btn.innerHTML = '<span class="spinner"></span>กำลังสร้าง...';
+  btn.disabled = true;
+  setStatus('pdfStatus', 'กำลังสร้าง PDF...', 'loading');
+
+  // Collect all data
+  const D = collectData();
+
+  try {
+    // Use Anthropic API to generate the filled form as structured data, then build PDF
+    await buildPDF(D);
+    goStep(4);
+  } catch(err) {
+    setStatus('pdfStatus', 'ข้อผิดพลาด: ' + err.message, 'error');
+    btn.innerHTML = 'สร้าง PDF ↓';
+    btn.disabled = false;
+  }
+}
+
+function collectData() {
+  const g = id => (document.getElementById(id) || {}).value || '';
+  const gchk = id => document.getElementById(id)?.checked || false;
+  const isJuristic = document.querySelector('input[name=personType]:checked')?.value === 'juristic';
+  return {
+    isJuristic,
+    prefix: g('f_prefix'), firstname: g('f_firstname'), lastname: g('f_lastname'),
+    idcard: g('f_idcard'), nationality: g('f_nationality'), race: g('f_race'),
+    dob: g('f_dob'), age: g('f_age'),
+    baan: g('f_baan'), moo: g('f_moo'), soi: g('f_soi'), road: g('f_road'),
+    tambon: g('f_tambon'), amphoe: g('f_amphoe'), changwat: g('f_changwat'),
+    zip: g('f_zip'), phone: g('f_phone'), fax: g('f_fax'), email: g('f_email'),
+    occupation: g('f_occupation'),
+    jtype: g('f_jtype'), jname: g('f_jname'), jdate: g('f_jdate'), jregno: g('f_jregno'),
+    jrep: g('f_jrep'), jrepid: g('f_jrepid'),
+    total: g('f_total'),
+    brand1: g('f_brand1'), type1: g('f_type1'), power1: g('f_power1'), blade1: g('f_blade1'), qty1: g('f_qty1'),
+    area_amphoe: g('f_area_amphoe'), area_changwat: g('f_area_changwat'),
+    obj1: gchk('f_obj1'), obj2: gchk('f_obj2'), obj3: gchk('f_obj3'), obj_other: g('f_obj_other'),
+    writeat: g('f_writeat'), writeday: g('f_writeday'), writemonth: g('f_writemonth'), writeyear: g('f_writeyear'),
+  };
+}
+
+// Build PDF using jsPDF with Unicode support
+async function buildPDF(D) {
+  // Load jsPDF
+  await loadScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  // Page dimensions
+  const PW = 210, PH = 297;
+  const ML = 20, MR = 20; // margins
+
+  // Helper: Thai-aware text (jsPDF supports Unicode via addFont, but we'll use built-in for now)
+  // Note: For proper Thai rendering, use a Unicode-capable font
+  // We'll add font support via base64 if needed, otherwise use standard UTF-8
+
+  const font = 'helvetica'; // fallback; Thai chars may not render without embedded font
+  doc.setFont(font);
+
+  function txt(text, x, y, opts = {}) {
+    doc.setFontSize(opts.size || 10);
+    doc.text(String(text || ''), x, y, opts);
+  }
+
+  function line(x1, y1, x2, y2) {
+    doc.setDrawColor(180);
+    doc.line(x1, y1, x2, y2);
+  }
+
+  function checkBox(x, y, checked) {
+    doc.setDrawColor(50);
+    doc.rect(x, y - 3.5, 4, 4);
+    if (checked) {
+      doc.setFont(font, 'bold');
+      doc.setFontSize(10);
+      doc.text('✓', x + 0.5, y - 0.2);
+      doc.setFont(font, 'normal');
+    }
+  }
+
+  // ─── Page 1 ───────────────────────────────────
+  doc.setFontSize(14);
+  doc.setFont(font, 'bold');
+  txt('คำขอรับใบอนุญาตให้มีเลื่อยโซ่ยนต์', PW/2, 20, {align: 'center'});
+  doc.setFont(font, 'normal');
+  doc.setFontSize(9);
+  txt('ลซ.๑', PW - MR, 20, {align: 'right'});
+
+  // เขียนที่ / วันที่
+  let y = 32;
+  txt('เขียนที่', ML, y);
+  txt(D.writeat, ML + 15, y); line(ML+14, y+1, ML+80, y+1);
+  txt('วันที่', ML+82, y);
+  txt(D.writeday, ML+93, y); line(ML+92, y+1, ML+105, y+1);
+  txt('เดือน', ML+107, y);
+  txt(D.writemonth, ML+118, y); line(ML+117, y+1, ML+155, y+1);
+  txt('พ.ศ.', ML+157, y);
+  txt(D.writeyear, ML+167, y); line(ML+166, y+1, PW-MR, y+1);
+
+  // ข้าพเจ้า
+  y += 10;
+  txt('ข้าพเจ้า', ML, y);
+  const fullname = D.isJuristic ? D.jrep : `${D.prefix} ${D.firstname} ${D.lastname}`;
+  txt(fullname, ML + 18, y); line(ML+17, y+1, PW-MR, y+1);
+
+  // บุคคลธรรมดา
+  y += 8;
+  checkBox(ML, y, !D.isJuristic);
+  txt('เป็นบุคคลธรรมดา  เลขประจำตัวประชาชน', ML + 5, y);
+  // ID card boxes
+  if (!D.isJuristic) {
+    const idStr = D.idcard.replace(/\D/g, '');
+    let bx = ML + 82;
+    for (let i = 0; i < 13; i++) {
+      doc.setDrawColor(50); doc.rect(bx, y - 3.5, 5, 5);
+      if (idStr[i]) txt(idStr[i], bx + 1.2, y + 0.5);
+      bx += 5.5;
+    }
+  }
+  txt('สัญชาติ', ML + 159, y);
+  txt(D.nationality, ML + 170, y); line(ML+169, y+1, PW-MR, y+1);
+
+  y += 8;
+  txt('เกิด', ML, y); txt(D.dob, ML+10, y); line(ML+9, y+1, ML+55, y+1);
+  txt('อายุ', ML+57, y); txt(D.age, ML+67, y); line(ML+66, y+1, ML+80, y+1);
+  txt('ปี มีภูมิลำเนาอยู่บ้านเลขที่', ML+82, y);
+  txt(D.baan, ML+122, y); line(ML+121, y+1, ML+140, y+1);
+  txt('หมู่ที่', ML+142, y); txt(D.moo, ML+152, y); line(ML+151, y+1, ML+165, y+1);
+  txt('ตรอก/ซอย', ML+167, y); txt(D.soi, ML+182, y); line(ML+181, y+1, PW-MR, y+1);
+
+  y += 8;
+  txt('ถนน', ML, y); txt(D.road, ML+12, y); line(ML+11, y+1, ML+65, y+1);
+  txt('ตำบล/แขวง', ML+67, y); txt(D.tambon, ML+85, y); line(ML+84, y+1, ML+145, y+1);
+  txt('อำเภอ/เขต', ML+147, y); txt(D.amphoe, ML+164, y); line(ML+163, y+1, PW-MR, y+1);
+
+  y += 8;
+  txt('จังหวัด', ML, y); txt(D.changwat, ML+16, y); line(ML+15, y+1, ML+60, y+1);
+  txt('รหัสไปรษณีย์', ML+62, y); txt(D.zip, ML+85, y); line(ML+84, y+1, ML+105, y+1);
+  txt('โทรศัพท์', ML+107, y); txt(D.phone, ML+122, y); line(ML+121, y+1, ML+165, y+1);
+  txt('โทรสาร', ML+167, y); txt(D.fax, ML+179, y); line(ML+178, y+1, PW-MR, y+1);
+
+  y += 8;
+  txt('E-mail', ML, y); txt(D.email, ML+15, y); line(ML+14, y+1, PW-MR, y+1);
+
+  y += 8;
+  txt('ประกอบอาชีพหรือกิจการ', ML, y); txt(D.occupation, ML+45, y); line(ML+44, y+1, PW-MR, y+1);
+
+  // นิติบุคคล
+  y += 10;
+  checkBox(ML, y, D.isJuristic);
+  txt('เป็นนิติบุคคลประเภท', ML+5, y);
+  txt(D.jtype, ML+45, y); line(ML+44, y+1, ML+100, y+1);
+  txt('ชื่อนิติบุคคล', ML+102, y); txt(D.jname, ML+122, y); line(ML+121, y+1, PW-MR, y+1);
+
+  if (D.isJuristic) {
+    y += 8;
+    txt('จดทะเบียนเมื่อ', ML, y); txt(D.jdate, ML+28, y); line(ML+27, y+1, ML+80, y+1);
+    txt('เลขทะเบียน', ML+120, y); txt(D.jregno, ML+142, y); line(ML+141, y+1, PW-MR, y+1);
+    y += 8;
+    txt('ที่ตั้งสำนักงานเลขที่', ML, y); txt(D.baan, ML+42, y); line(ML+41, y+1, ML+65, y+1);
+    txt('หมู่ที่', ML+67, y); txt(D.moo, ML+77, y); line(ML+76, y+1, ML+90, y+1);
+    y += 8;
+    txt('ตำบล/แขวง', ML, y); txt(D.tambon, ML+22, y); line(ML+21, y+1, ML+85, y+1);
+    txt('อำเภอ/เขต', ML+87, y); txt(D.amphoe, ML+105, y); line(ML+104, y+1, ML+155, y+1);
+    txt('จังหวัด', ML+157, y); txt(D.changwat, ML+170, y); line(ML+169, y+1, PW-MR, y+1);
+    y += 8;
+    txt('รหัสไปรษณีย์', ML, y); txt(D.zip, ML+28, y); line(ML+27, y+1, ML+60, y+1);
+    txt('โทรศัพท์', ML+62, y); txt(D.phone, ML+78, y); line(ML+77, y+1, ML+130, y+1);
+    txt('โทรสาร', ML+132, y); txt(D.fax, ML+146, y); line(ML+145, y+1, PW-MR, y+1);
+    y += 8;
+    txt('โดยผู้มีอำนาจลงชื่อแทนนิติบุคคล ชื่อ', ML, y); txt(D.jrep, ML+80, y); line(ML+79, y+1, PW-MR, y+1);
+    y += 8;
+    txt('เลขประจำตัวประชาชน', ML, y);
+    const idStr2 = D.jrepid.replace(/\D/g, '');
+    let bx2 = ML + 42;
+    for (let i = 0; i < 13; i++) {
+      doc.setDrawColor(50); doc.rect(bx2, y-3.5, 5, 5);
+      if (idStr2[i]) txt(idStr2[i], bx2+1.2, y+0.5);
+      bx2 += 5.5;
+    }
+  }
+
+  // ── ข้อ ๑
+  y = Math.max(y + 12, 190);
+  txt('ขอยื่นต่อนายทะเบียนเลื่อยโซ่ยนต์มีข้อความดังต่อไปนี้', ML, y);
+  y += 8;
+  txt('๑. ข้าพเจ้ามีความประสงค์ขออนุญาตมีเลื่อยโซ่ยนต์ในฐานะ', ML, y);
+  y += 7;
+  checkBox(ML+5, y, !D.isJuristic); txt('๑.๑ บุคคลธรรมดา', ML+12, y);
+  y += 7;
+  checkBox(ML+5, y, D.isJuristic); txt('๑.๒ นิติบุคคล', ML+12, y);
+
+  // ── ข้อ ๒
+  y += 12;
+  txt('๒. จำนวนเลื่อยโซ่ยนต์ที่ขออนุญาตให้มี รวม', ML, y);
+  txt(D.total, ML+90, y); line(ML+89, y+1, ML+100, y+1);
+  txt('เครื่อง มีรายละเอียดดังนี้', ML+102, y);
+
+  y += 8;
+  txt('๒.๑ ประเภทเครื่องจักรกลต้นกำลัง', ML+5, y);
+  txt(D.type1, ML+70, y); line(ML+69, y+1, ML+120, y+1);
+  txt('ยี่ห้อ/รุ่น', ML+122, y); txt(D.brand1, ML+138, y); line(ML+137, y+1, PW-MR, y+1);
+  y += 7;
+  txt('กำลังเครื่องจักรกล', ML+5, y); txt(D.power1, ML+48, y); line(ML+47, y+1, ML+68, y+1);
+  txt('แรงม้า แผ่นบังคับโซ่ความยาว', ML+70, y); txt(D.blade1, ML+125, y); line(ML+124, y+1, ML+140, y+1);
+  txt('นิ้ว จำนวน', ML+142, y); txt(D.qty1, ML+160, y); line(ML+159, y+1, ML+175, y+1);
+  txt('เครื่อง', ML+177, y);
+
+  // rows 2.2 - 2.5 (blank)
+  for (let r = 2; r <= 5; r++) {
+    y += 10;
+    txt(`๒.${r} ประเภทเครื่องจักรกลต้นกำลัง`, ML+5, y);
+    line(ML+69, y+1, ML+120, y+1);
+    txt('ยี่ห้อ/รุ่น', ML+122, y);
+    line(ML+137, y+1, PW-MR, y+1);
+    y += 7;
+    txt('กำลังเครื่องจักรกล', ML+5, y);
+    line(ML+47, y+1, ML+68, y+1);
+    txt('แรงม้า แผ่นบังคับโซ่ความยาว', ML+70, y);
+    line(ML+124, y+1, ML+140, y+1);
+    txt('นิ้ว จำนวน', ML+142, y);
+    line(ML+159, y+1, ML+175, y+1);
+    txt('เครื่อง', ML+177, y);
+  }
+
+  // ข้อ ๓
+  y += 12;
+  txt('๓. พื้นที่ที่จะขออนุญาตมีเลื่อยโซ่ยนต์อำเภอ/เขต', ML, y);
+  txt(D.area_amphoe, ML+95, y); line(ML+94, y+1, ML+155, y+1);
+  y += 7;
+  txt('จังหวัด', ML, y); txt(D.area_changwat, ML+16, y); line(ML+15, y+1, ML+80, y+1);
+
+  // Need page 2 for obj + signatures
+  doc.addPage();
+  y = 20;
+  txt('-๒-', PW/2, y, {align:'center'}); txt('ลซ.๑', PW-MR, y, {align:'right'});
+
+  y += 10;
+  txt('๔. โดยมีวัตถุประสงค์หรือประเภทของกิจการที่ต้องใช้เลื่อยโซ่ยนต์ ดังนี้', ML, y);
+  y += 8;
+  checkBox(ML+5, y, D.obj1); txt('๔.๑ รับจ้างทั่วไป', ML+12, y);
+  y += 7;
+  checkBox(ML+5, y, D.obj2); txt('๔.๒ ใช้ในกิจการส่วนตัว', ML+12, y);
+  y += 7;
+  checkBox(ML+5, y, D.obj3); txt('๔.๓ อื่นๆ ดังนี้', ML+12, y);
+  txt(D.obj_other, ML+40, y); line(ML+39, y+1, PW-MR, y+1);
+
+  // ข้อ ๕
+  y += 12;
+  txt('๕. ข้าพเจ้าขอรับรองว่ามีคุณสมบัติและไม่มีลักษณะต้องห้าม ดังนี้', ML, y);
+  const props = [
+    '๕.๑ มีอายุไม่ต่ำกว่ายี่สิบปีบริบูรณ์',
+    '๕.๒ มีสัญชาติไทย',
+    '๕.๓ มีภูมิลำเนาหรือถิ่นที่อยู่ในราชอาณาจักร',
+    '๕.๔ ไม่เป็นคนไร้ความสามารถหรือคนเสมือนไร้ความสามารถ',
+    '๕.๕ ไม่เป็นบุคคลล้มละลาย',
+    '๕.๖ ไม่อยู่ระหว่างถูกพักใช้ใบอนุญาต หรือไม่เคยถูกเพิกถอนใบอนุญาต...',
+    '๕.๗ ไม่เคยต้องโทษสำหรับความผิดตามกฎหมายว่าด้วยเลื่อยโซ่ยนต์',
+    '๕.๘ ไม่เคยต้องโทษสำหรับความผิดตามกฎหมายว่าด้วยป่าไม้',
+    '๕.๙ ไม่เคยต้องโทษสำหรับความผิดตามกฎหมายว่าด้วยป่าสงวนแห่งชาติ',
+    '๕.๑๐ ไม่เคยต้องโทษสำหรับความผิดตามกฎหมายว่าด้วยอุทยานแห่งชาติ',
+    '๕.๑๑ ไม่เคยต้องโทษสำหรับความผิดตามกฎหมายว่าด้วยการสงวนและคุ้มครองสัตว์ป่า',
+  ];
+  props.forEach(p => { y += 7; txt(p, ML+5, y); });
+
+  // ลายเซ็น
+  y += 20;
+  txt('(ลงชื่อ)', PW/2 - 10, y);
+  line(PW/2 + 5, y+1, PW/2 + 60, y+1);
+  txt('ผู้ขอ', PW/2 + 62, y);
+  y += 7;
+  const sigName = D.isJuristic ? D.jrep : `${D.prefix} ${D.firstname} ${D.lastname}`;
+  txt(`(${sigName})`, PW/2 + 5, y, {align:'center'});
+
+  // Output
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  document.getElementById('downloadLink').href = url;
+  document.getElementById('downloadLink').download = `ลซ1_${D.firstname || 'คำขอ'}.pdf`;
+}
+
+function loadScript(src) {
+  return new Promise((res, rej) => {
+    if (document.querySelector(`script[src="${src}"]`)) { res(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.onload = res; s.onerror = rej;
+    document.head.appendChild(s);
+  });
+}
+
+function setStatus(id, msg, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = msg;
+  el.className = 'status-msg ' + type;
+}
+
+
+
+function resetForm() {
+  capturedImage = null;
+  document.getElementById('snapshot').style.display = 'none';
+  document.getElementById('camPlaceholder').style.display = 'block';
+  document.getElementById('idResult').classList.remove('show');
+  document.getElementById('btnRead').disabled = true;
+  document.getElementById('btnNext1').disabled = true;
+  document.querySelectorAll('input[type=text], input[type=tel]').forEach(i => i.value = '');
+}
+</script>
+</body>
+</html>
