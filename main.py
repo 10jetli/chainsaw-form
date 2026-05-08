@@ -2,7 +2,8 @@ from flask import Flask, request, jsonify, send_from_directory
 import requests
 import os
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='.')
+
 app.config['MAX_CONTENT_LENGTH'] = 10 * 1024 * 1024  # 10MB
 
 # ใส่ Anthropic API Key ตรงนี้
@@ -10,7 +11,8 @@ ANTHROPIC_API_KEY = os.environ.get('ANTHROPIC_API_KEY', 'ใส่-key-ของ
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory('.', 'index.html')
+
 
 @app.route('/read-card', methods=['POST'])
 def read_card():
